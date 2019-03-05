@@ -11,5 +11,10 @@ module.exports = {
   /*************************************************************************/
   /* basePath: {string} the root directory for where to store files        */
   /*************************************************************************/
-  basePath: path.sep + path.join("data", "file_processor")
+  basePath: path.sep + path.join("data", "file_processor"),
+
+  /*************************************************************************/
+  /* maxBytes: {Number} max size of uploaded file                              */
+  /*************************************************************************/
+  maxBytes: 10000000
 };
