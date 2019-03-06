@@ -2,6 +2,10 @@
  * handler
  * our Request handler.
  */
+const async = require("async");
+const fs = require("fs");
+const path = require("path");
+
 var config;
 
 module.exports = {
@@ -74,6 +78,60 @@ module.exports = {
      cb(err, { status: "error", error: err });
 
      */
-    cb(null, { status: "success" });
+
+    console.log("jobData : ", req);
+
+    var destPath = path.join(
+      config.basePath,
+      req.param.tenant,
+      req.param.appKey
+    );
+
+    async.series(
+      [
+        // make sure destination directory is created
+        next => {
+          fs.stat(destPath, function(err) {
+            if (err && err.code === "ENOENT") {
+              // create the directory!
+              console.log("---making opimageupload path:" + destPath);
+
+              fs.mkdir(destPath, { recursive: true }, function(err) {
+                if (err) err.code = 500;
+                next(err);
+              });
+            } else {
+              next();
+            }
+          });
+        },
+
+        // move file to new location
+        next => {
+          var tempPath = path.join(
+            config.basePath,
+            config.uploadPath,
+            req.param.name
+          );
+          var newPath = path.join(destPath, req.param.name);
+          fs.rename(tempPath, newPath, function(err) {
+            next(err);
+          });
+        }
+
+        // store file entry in DB
+
+        // return new file uuid
+      ],
+      err => {
+        if (err) {
+          cb(err);
+        } else {
+          cb(null, { uuid: "123456" });
+        }
+      }
+    );
+
+    // cb(null, { uuid: "123456" });
   }
 };

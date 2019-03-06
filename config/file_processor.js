@@ -14,6 +14,12 @@ module.exports = {
   basePath: path.sep + path.join("data", "file_processor"),
 
   /*************************************************************************/
+  /* uploadPath: {string} the directory (under basePath) where uploaded    */
+  /*             files are stored.                                         */
+  /*************************************************************************/
+  uploadPath: "tmp",
+
+  /*************************************************************************/
   /* maxBytes: {Number} max size of uploaded file                              */
   /*************************************************************************/
   maxBytes: 10000000
