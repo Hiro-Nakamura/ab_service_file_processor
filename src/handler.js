@@ -8,6 +8,8 @@ const path = require("path");
 
 var config;
 
+const Model = require(path.join(__dirname, "model"));
+
 module.exports = {
   /**
    * init
@@ -21,6 +23,7 @@ module.exports = {
   init: function(options) {
     options = options || {};
     config = options.config || null;
+    Model.init(options.DB);
   },
 
   /**
@@ -87,6 +90,8 @@ module.exports = {
       req.param.appKey
     );
 
+    var uuid; // the new uuid of the file
+
     async.series(
       [
         // make sure destination directory is created
@@ -94,7 +99,7 @@ module.exports = {
           fs.stat(destPath, function(err) {
             if (err && err.code === "ENOENT") {
               // create the directory!
-              console.log("---making opimageupload path:" + destPath);
+              console.log("making file_processor path:" + destPath);
 
               fs.mkdir(destPath, { recursive: true }, function(err) {
                 if (err) err.code = 500;
@@ -117,9 +122,32 @@ module.exports = {
           fs.rename(tempPath, newPath, function(err) {
             next(err);
           });
-        }
+        },
 
         // store file entry in DB
+        next => {
+          // uuid : the fileName without '.ext'
+          uuid = req.param.name.split(".")[0];
+
+          Model.create({
+            uuid: uuid,
+            appKey: req.param.appKey,
+            permission: req.param.permission,
+            file: req.param.name,
+            pathFile: destPath,
+            size: req.param.size,
+            type: req.param.type,
+            info: req.param,
+            uploadedBy: req.param.userUUID // should be the user.uuid
+          })
+            .then(function() {
+              next();
+            })
+            .catch(function(err) {
+              err.code = 500;
+              next(err);
+            });
+        }
 
         // return new file uuid
       ],
@@ -127,7 +155,7 @@ module.exports = {
         if (err) {
           cb(err);
         } else {
-          cb(null, { uuid: "123456" });
+          cb(null, { uuid });
         }
       }
     );
