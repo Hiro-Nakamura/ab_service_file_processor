@@ -40,6 +40,8 @@
 ab-utils@Hiro-Nakamura/ab-utils:
   version "0.0.0"
   resolved "https://codeload.github.com/Hiro-Nakamura/ab-utils/tar.gz/28ae410ecf2c1e20f9fda4129a3d847cd24528a3"
+  dependencies:
+    lodash "^4.17.11"
 
 abbrev@1:
   version "1.1.1"
