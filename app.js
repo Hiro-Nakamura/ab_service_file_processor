@@ -22,6 +22,9 @@ DB.connect(function(err) {
 });
 DB.on("error", err => {
   console.log("What happened here?", err);
+  if ("ECONNRESET" == err.code) {
+    // How to reconnect?
+  }
 });
 
 const ABService = AB.service;
