@@ -6,25 +6,13 @@ const async = require("async");
 const fs = require("fs");
 const path = require("path");
 
-var config;
-
-const Model = require(path.join(__dirname, "model"));
+// const Model = require(path.join(__dirname, "model"));
 
 module.exports = {
     /**
-     * init
-     * setup our configuration & connections
-     * @param {obj} options
-     *        An object hash of important configuration data:
-     *        .config  {obj} the config settings for this service.
-     *        .DB {DBConnection} an instance of a live DB connection.
-     *        ...
+     * Key: the cote message key we respond to.
      */
-    init: function(options) {
-        options = options || {};
-        config = options.config || null;
-        Model.init(options.DB);
-    },
+    key: "file.upload",
 
     /**
      * fn
@@ -37,10 +25,12 @@ module.exports = {
     fn: function handler(req, cb) {
         var err;
 
+        var config = req.config();
+
         // if config not set, we have not be initialized properly.
         if (!config) {
-            console.log("WARN: file.upload handler not setup properly.");
-            err = new Error("file.upload: Missing config");
+            req.log(`WARN: ${this.key} handler not setup properly.`);
+            err = new Error(`${this.key}: Missing config`);
             err.code = "EMISSINGCONFIG";
             err.req = req;
             cb(err);
@@ -50,10 +40,10 @@ module.exports = {
         // check if we are enabled
         if (!config.enable) {
             // we shouldn't be getting notification.email messages
-            console.log(
-                "WARN: file_processor job received, but config.enable is false."
+            req.log(
+                `WARN: ${this.key} job received, but config.enable is false.`
             );
-            err = new Error("file.upload service is disabled.");
+            err = new Error(`${this.key} service is disabled.`);
             err.code = "EDISABLED";
             cb(err);
             return;
@@ -81,12 +71,12 @@ module.exports = {
          cb(err, { status: "error", error: err });
          */
 
-        console.log("jobData : ", req);
+        req.log("jobData : ", req.data);
 
         var destPath = path.join(
             config.basePath,
-            req.param.tenant,
-            req.param.appKey
+            req.data.tenant,
+            req.data.appKey
         );
 
         var uuid; // the new uuid of the file
@@ -119,10 +109,20 @@ module.exports = {
                     var tempPath = path.join(
                         config.basePath,
                         config.uploadPath,
-                        req.param.name
+                        req.data.name
                     );
-                    var newPath = path.join(destPath, req.param.name);
+                    var newPath = path.join(destPath, req.data.name);
                     fs.rename(tempPath, newPath, function(err) {
+                        if (err) {
+                            req.log(
+                                `Error moving file [${tempPath}] -> [${newPath}] `,
+                                err
+                            );
+                        } else {
+                            req.log(
+                                `moved file [${tempPath}] -> [${newPath}] `
+                            );
+                        }
                         next(err);
                     });
                 },
@@ -130,23 +130,27 @@ module.exports = {
                 // store file entry in DB
                 (next) => {
                     // uuid : the fileName without '.ext'
-                    uuid = req.param.name.split(".")[0];
+                    uuid = req.data.name.split(".")[0];
 
+                    // then handle .userUUID  -> req.user.id
+                    var Model = req.Model("FileProcessor");
                     Model.create({
                         uuid: uuid,
-                        appKey: req.param.appKey,
-                        permission: req.param.permission,
-                        file: req.param.name,
+                        appKey: req.data.appKey,
+                        permission: req.data.permission,
+                        file: req.data.name,
                         pathFile: destPath,
-                        size: req.param.size,
-                        type: req.param.type,
-                        info: req.param,
-                        uploadedBy: req.param.userUUID // should be the user.uuid
+                        size: req.data.size,
+                        type: req.data.type,
+                        info: req.data,
+                        uploadedBy: req.data.userUUID // should be the user.uuid
                     })
-                        .then(() => {
+                        .then(function() {
+                            req.log(`file entry saved for [${uuid}]`);
                             next();
                         })
-                        .catch((err) => {
+                        .catch(function(err) {
+                            req.log("Error updating DB: ", err);
                             err.code = 500;
                             next(err);
                         });
@@ -156,6 +160,7 @@ module.exports = {
             ],
             (err) => {
                 if (err) {
+                    req.log("Error uploading file:", err);
                     cb(err);
                 } else {
                     cb(null, { uuid });
