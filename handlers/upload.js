@@ -51,7 +51,8 @@ module.exports = {
 
         // verify required parameters in job
         /*
-            if (!req.email) {
+            var email = req.param("email");
+            if (!email) {
               var err2 = new Error(
                 ".email parameter required in file.upload service."
               );
