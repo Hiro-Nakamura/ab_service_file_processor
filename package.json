@@ -8,7 +8,7 @@
   "dependencies": {
     "ab-utils": "Hiro-Nakamura/ab-utils",
     "cote": "^0.19.1",
-    "lodash": "^4.17.13",
+    "lodash": "^4.17.19",
     "mysql": "^2.17.1",
     "nodemon": "^1.19.4"
   },
