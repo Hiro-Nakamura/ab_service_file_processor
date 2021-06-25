@@ -55,9 +55,8 @@ module.exports = {
          .then((AB) => { // eslint-disable-line
 
             var uuid = req.param("uuid");
-            AB.objectFile()
-               .model()
-               .find({ uuid })
+            var SiteFile = AB.objectFile().model();
+            req.retry(() => SiteFile.find({ uuid }))
                .then((entry) => {
                   // req.log(entry);
                   if (entry.length) {

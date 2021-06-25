@@ -7,6 +7,8 @@ const async = require("async");
 const fs = require("fs");
 const path = require("path");
 
+const PathUtils = require("../utils/pathUtils.js");
+
 const ABBootstrap = require("../AppBuilder/ABBootstrap");
 // {ABBootstrap}
 // responsible for initializing and returning an {ABFactory} that will work
@@ -92,32 +94,19 @@ module.exports = {
             // {string}
             // the path + filename of the stored file
 
-            var config = req.config();
-            var destPath = path.join(
-               config.basePath,
-               req.tenantID(),
-               "file_processor"
-            );
+            // var config = req.config();
+            // var destPath = path.join(
+            //    config.basePath,
+            //    req.tenantID(),
+            //    "file_processor"
+            // );
+            var destPath = PathUtils.destPath(req);
 
             async.series(
                {
                   // make sure destination directory is created
                   make: (next) => {
-                     fs.stat(destPath, function (err) {
-                        if (err && err.code === "ENOENT") {
-                           // create the directory!
-                           req.log("making file_processor path:" + destPath);
-
-                           fs.mkdir(destPath, { recursive: true }, function (
-                              err
-                           ) {
-                              if (err) err.code = 500;
-                              next(err);
-                           });
-                        } else {
-                           next();
-                        }
-                     });
+                     PathUtils.makePath(destPath, req, next);
                   },
 
                   // move file to new location
@@ -150,19 +139,19 @@ module.exports = {
                      // uuid : the fileName without '.ext'
                      // uuid = req.param("name").split(".")[0];
 
-                     AB.objectFile()
-                        .model()
-                        .create({
-                           // uuid,
-                           file: req.param("fileName"),
-                           pathFile,
-                           size: req.param("size"),
-                           type: req.param("type"),
-                           info: req.data,
-                           object: req.param("object"),
-                           field: req.param("field"),
-                           uploadedBy: req.param("uploadedBy"),
-                        })
+                     var newEntry = {
+                        // uuid,
+                        file: req.param("fileName"),
+                        pathFile,
+                        size: req.param("size"),
+                        type: req.param("type"),
+                        info: req.data,
+                        object: req.param("object"),
+                        field: req.param("field"),
+                        uploadedBy: req.param("uploadedBy"),
+                     };
+                     var SiteFile = AB.objectFile().model();
+                     req.retry(() => SiteFile.create(newEntry))
                         .then(function (entry) {
                            req.log(`file entry saved for [${entry.uuid}]`);
                            next(null, entry.uuid);
